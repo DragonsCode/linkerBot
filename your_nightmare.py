@@ -196,6 +196,8 @@ async def show(message: types.Message):
 
 @dp.message_handler(commands='start')
 async def start(message: types.Message):
+    async with state.proxy():
+        data['clicked'] = 0
     con = sqlite3.connect('ref.db')
     cur = con.cursor()
     data = cur.execute('SELECT user FROM db WHERE user = ?', (message.from_user.id,)).fetchall()
@@ -238,8 +240,15 @@ async def cancel(call: types.CallbackQuery, state: FSMContext):
 
 
 @dp.callback_query_handler(Text(equals='check'))
-@dp.throttled(wait, rate=300)
 async def check(call: types.CallbackQuery, state: FSMContext):
+    async with state.proxy() as data:
+        data['clicked'] += 1
+        if data['clicked'] >2:
+            data['clicked'] = 0
+            await bot.send_message(call.from_user.id, "Антиспам: повторите попытку через 5 минут, я сам сообщу")
+            await asyncio.sleep(300)
+            await bot.send_message(call.from_user.id, "5 минут прошло, можете проверять оплату")
+            return
     #await bot.delete_message(call.from_user.id, call.message.message_id)
     #await bot.answer_callback_query(call.id)
     con = sqlite3.connect('ref.db')
