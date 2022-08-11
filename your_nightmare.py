@@ -21,6 +21,7 @@ V = 1
 VK_ID = 215268409
 TOKEN = "a469a4784e9eb78bd15479c964fba70a2220a377309763864a"
 ADMIN = 5161665132
+#ADMIN = 235519518
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token='5379912413:AAHU1vDeTtZMBMU4-DUoK2elDDGR9_tilCs', parse_mode=types.ParseMode.HTML)
@@ -46,6 +47,7 @@ class keksik:
     def history(self, len = 20):
         r = requests.post("https://api.keksik.io/donates/get", json={'group': self.group, 'token': self.token, 'v': self.v}, headers=self.headers)
         out = json.loads(r.text)
+        print(out)
         return out
     def find(self, msg, price):
         lst = self.history().get('list')
@@ -85,6 +87,10 @@ def generate():
     for i in range(20):
         chars += choice(ally)
     return chars
+
+async def wait(*args, **kwargs):
+    call=args[0]
+    await bot.send_message(call.from_user.id, "Не спамьте пожалуйста :(")
 
 
 @dp.callback_query_handler(Text(equals='simple'))
@@ -232,6 +238,7 @@ async def cancel(call: types.CallbackQuery, state: FSMContext):
 
 
 @dp.callback_query_handler(Text(equals='check'))
+@dp.throttled(wait, rate=300)
 async def check(call: types.CallbackQuery, state: FSMContext):
     #await bot.delete_message(call.from_user.id, call.message.message_id)
     #await bot.answer_callback_query(call.id)
