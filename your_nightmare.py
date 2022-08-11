@@ -196,8 +196,6 @@ async def show(message: types.Message):
 
 @dp.message_handler(commands='start')
 async def start(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['clicked'] = 0
     con = sqlite3.connect('ref.db')
     cur = con.cursor()
     data = cur.execute('SELECT user FROM db WHERE user = ?', (message.from_user.id,)).fetchall()
@@ -242,6 +240,10 @@ async def cancel(call: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(Text(equals='check'))
 async def check(call: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
+        try:
+            data['clicked']
+        except:
+            data['clicked'] = 0
         data['clicked'] += 1
         if data['clicked'] >2:
             data['clicked'] = 0
