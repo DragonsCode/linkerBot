@@ -195,7 +195,7 @@ async def show(message: types.Message):
     await message.reply(text)
 
 @dp.message_handler(commands='start')
-async def start(message: types.Message):
+async def start(message: types.Message, state: FSMContext):
     async with state.proxy():
         data['clicked'] = 0
     con = sqlite3.connect('ref.db')
