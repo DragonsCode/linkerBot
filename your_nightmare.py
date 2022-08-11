@@ -246,9 +246,9 @@ async def check(call: types.CallbackQuery, state: FSMContext):
             data['clicked'] = 0
         data['clicked'] += 1
         if data['clicked'] >2:
-            data['clicked'] = 0
             await bot.send_message(call.from_user.id, "Антиспам: повторите попытку через 5 минут, я сам сообщу")
             await asyncio.sleep(300)
+            data['clicked'] = 0
             await bot.send_message(call.from_user.id, "5 минут прошло, можете проверять оплату")
             return
     #await bot.delete_message(call.from_user.id, call.message.message_id)
