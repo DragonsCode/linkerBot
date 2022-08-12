@@ -22,9 +22,10 @@ VK_ID = 215268409
 TOKEN = "a469a4784e9eb78bd15479c964fba70a2220a377309763864a"
 ADMIN = 5161665132
 #ADMIN = 235519518
+ADMIN = [235519518, 5161665132]
 
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token='5379912413:AAHU1vDeTtZMBMU4-DUoK2elDDGR9_tilCs', parse_mode=types.ParseMode.HTML)
+bot = Bot(token='5379912413:AAHU1vDeTtZMBMU4-DUoK2elDDGR9_tilCs')
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
@@ -114,7 +115,7 @@ async def simple(call: types.CallbackQuery, state: FSMContext):
     cur.execute('UPDATE db SET msg = ? WHERE user = ?', (msg, call.from_user.id,))
     con.commit()
     con.close()
-    await bot.send_message(call.from_user.id, f"⭐️Нажми на кнопку \"Оплатить\" и оплати {price} рублей через мини приложение ВК с таким комментарием: <code>{msg}</code>\n\n⚡️Тебе нужно оплатить ровно столько сколько сказано, не меньше и не больше! Если ты запустил другую оплату, то эта оплата считается устаревшей и ссылку ты не получишь!\n\n✨Осталось видео: {available}\n🕛Длительность до 1 минуты\n\n#simple", reply_markup=buy)
+    await bot.send_message(call.from_user.id, f"⭐️Нажми на кнопку \"Оплатить\" и оплати {price} рублей через мини приложение ВК с таким комментарием: <code>{msg}</code>\n\n⚡️Тебе нужно оплатить ровно столько сколько сказано, не меньше и не больше! Если ты запустил другую оплату, то эта оплата считается устаревшей и ссылку ты не получишь!\n\n✨Осталось видео: {available}\n🕛Длительность до 1 минуты\n\n#simple", reply_markup=buy, parse_mode=types.ParseMode.HTML)
 
 @dp.callback_query_handler(Text(equals='premium'))
 async def premium(call: types.CallbackQuery, state: FSMContext):
@@ -137,7 +138,7 @@ async def premium(call: types.CallbackQuery, state: FSMContext):
     con.commit()
     con.close()
     
-    await bot.send_message(call.from_user.id, f"⭐️Нажми на кнопку \"Оплатить\" и оплати {price} рублей через мини приложение ВК с таким комментарием: <code>{msg}</code>\n\n⚡️Тебе нужно оплатить ровно столько сколько сказано, не меньше и не больше! Если ты запустил другую оплату, то эта оплата считается устаревшей и ссылку ты не получишь!\n\n✨Осталось видео: {available}\n🕛Длительность до 5 часов\n\n#premium", reply_markup=buy)
+    await bot.send_message(call.from_user.id, f"⭐️Нажми на кнопку \"Оплатить\" и оплати {price} рублей через мини приложение ВК с таким комментарием: <code>{msg}</code>\n\n⚡️Тебе нужно оплатить ровно столько сколько сказано, не меньше и не больше! Если ты запустил другую оплату, то эта оплата считается устаревшей и ссылку ты не получишь!\n\n✨Осталось видео: {available}\n🕛Длительность до 5 часов\n\n#premium", reply_markup=buy, parse_mode=types.ParseMode.HTML)
 
 @dp.message_handler(IDFilter(chat_id=ADMIN), commands="add")
 async def add(message: types.Message):
@@ -259,18 +260,20 @@ async def check(call: types.CallbackQuery, state: FSMContext):
     msg = ''
     price = 0
     tries = 0
+    data2 = cur.execute('SELECT * FROM db').fetchall()
+    print(data2)
     if type == 'premium':
-        data = cur.execute('SELECT premium, msg_premium FROM db WHERE user = ?', (call.from_user.id,)).fetchone()
+        data = cur.execute('SELECT premium, msg_premium FROM db WHERE user = ?', (call.from_user.id,)).fetchall()
         print(data)
-        msg = data[1]
-        price = 50*data[0]
-        tries = data[0]
+        msg = data[0][1]
+        price = 50*data[0][0]
+        tries = data[0][0]
     elif type == 'simple':
-        data = cur.execute('SELECT simple, msg FROM db WHERE user = ?', (call.from_user.id,)).fetchone()
+        data = cur.execute('SELECT simple, msg FROM db WHERE user = ?', (call.from_user.id,)).fetchall()
         print(data)
-        msg = data[1]
-        price = 10*data[0]
-        tries = data[0]
+        msg = data[0][1]
+        price = 10*data[0][0]
+        tries = data[0][0]
     con.commit()
     con.close()
     print(type, msg, price, tries)
