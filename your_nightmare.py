@@ -22,7 +22,7 @@ VK_ID = 215268409
 TOKEN = "a469a4784e9eb78bd15479c964fba70a2220a377309763864a"
 ADMIN = 5161665132
 #ADMIN = 235519518
-ADMIN = [235519518, 5161665132]
+#ADMIN = [235519518, 5161665132]
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token='5379912413:AAHU1vDeTtZMBMU4-DUoK2elDDGR9_tilCs')
@@ -237,7 +237,7 @@ async def start(message: types.Message, state: FSMContext):
     cur = con.cursor()
     data = cur.execute('SELECT user FROM db WHERE user = ?', (message.from_user.id,)).fetchall()
     if not data:
-        cur.execute('INSERT INTO db VALUES (?, ?, ?, ?, ?)', (message.from_user.id, 1, 1, "No", "No",))
+        cur.execute('INSERT INTO db VALUES (?, ?, ?, ?, ?, ?, ?)', (message.from_user.id, 1, 1, "No", "No", 1, "No",))
         con.commit()
     con.close()
     pic = open('start.jpg', 'rb')
