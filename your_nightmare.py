@@ -31,7 +31,6 @@ dp = Dispatcher(bot, storage=storage)
 
 purch = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton('Купить', callback_data='buy'))
 
-tariffs = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton('Тестовое видео', callback_data='simple'), InlineKeyboardButton('Премиум видео', callback_data='premium'))
 
 buy = InlineKeyboardMarkup(row_width=2).add(InlineKeyboardButton('Оплатить', url='https://vk.com/club215268409?w=app6887721_-215268409'), InlineKeyboardButton('Проверить', callback_data='check'), InlineKeyboardButton('Отмена', callback_data='cancel'))
 
@@ -73,7 +72,7 @@ def get_type(callback_query):
 def db():
     con = sqlite3.connect('ref.db')
     cur = con.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS db (user INTEGER, simple INTEGER DEFAULT 1, premium INTEGER DEFAULT 1, msg TEXT DEFAULT "No", msg_premium TEXT DEFAULT "No")')
+    cur.execute('CREATE TABLE IF NOT EXISTS db (user INTEGER, simple INTEGER DEFAULT 1, premium INTEGER DEFAULT 1, msg TEXT DEFAULT "No", msg_premium TEXT DEFAULT "No", gold INTEGER DEFAULT 1, msg_gold TEXT DEFAULT "No")')
     cur.execute('CREATE TABLE IF NOT EXISTS links (link TEXT, tariff TEXT)')
     con.commit()
     con.close()
@@ -93,6 +92,28 @@ async def wait(*args, **kwargs):
     call=args[0]
     await bot.send_message(call.from_user.id, "Не спамьте пожалуйста :(")
 
+@dp.callback_query_handler(Text(equals='gold'))
+async def gold(call: types.CallbackQuery, state: FSMContext):
+    await bot.delete_message(call.from_user.id, call.message.message_id)
+    #await bot.answer_callback_query(call.id)
+    con = sqlite3.connect('ref.db')
+    cur = con.cursor()
+    type = 'gold'
+    tries =  cur.execute('SELECT gold FROM db WHERE user = ?', (call.from_user.id,)).fetchone()
+    links = cur.execute('SELECT link FROM links WHERE tariff = ?', (type,)).fetchall()
+    print(tries, links, type)
+    if tries[0] > len(links):
+        await bot.send_message(call.from_user.id, "Вы купили уже все ссылки из этого тарифа, совсем скоро мы добавим новые!")
+        return
+    available = len(links) - tries[0] +1
+    data = cur.execute('SELECT gold FROM db WHERE user = ?', (call.from_user.id,)).fetchone()
+    print(data)
+    price = 999
+    msg = generate()
+    cur.execute('UPDATE db SET msg_gold = ? WHERE user = ?', (msg, call.from_user.id,))
+    con.commit()
+    con.close()
+    await bot.send_message(call.from_user.id, f"⭐️Нажми на кнопку \"Оплатить\" и оплати {price} рублей через мини приложение ВК с таким комментарием: <code>{msg}</code>\n\n⚡️Тебе нужно оплатить ровно столько сколько сказано, не меньше и не больше! Если ты запустил другую оплату, то эта оплата считается устаревшей и ссылку ты не получишь!\n\n✨Осталось видео: {available}\nВ голдпаке находится более 20 видео и 100 фото\n\n#gold", reply_markup=buy, parse_mode=types.ParseMode.HTML)
 
 @dp.callback_query_handler(Text(equals='simple'))
 async def simple(call: types.CallbackQuery, state: FSMContext):
@@ -149,9 +170,9 @@ async def add(message: types.Message):
         return
     link = message.text.split(' ')[1]
     tariff = message.text.split(' ')[2]
-    tariffs = ['simple', 'premium']
+    tariffs = ['simple', 'premium', 'gold']
     if tariff not in tariffs:
-        await message.reply("Неверный тариф, указывай simple или premium")
+        await message.reply("Неверный тариф, указывай simple, premium или gold")
         return
     con = sqlite3.connect('ref.db')
     cur = con.cursor()
@@ -195,6 +216,21 @@ async def show(message: types.Message):
         text += f'{index}. {item[0]} - {item[1]}\n'
     await message.reply(text)
 
+@dp.message_handler(IDFilter(chat_id=ADMIN), commands="pub")
+async def pub(message: types.Message):
+    con = sqlite3.connect('ref.db')
+    cur = con.cursor()
+    data = cur.execute('SELECT user FROM db').fetchall()
+    con.close()
+    msg = message.text[4:]
+    print(data)
+    await message.answer('Отправлено!')
+    for i in data[0]:
+        try:
+            await bot.send_message(i[0], msg)
+        except Exception as e:
+            print(e)
+
 @dp.message_handler(commands='start')
 async def start(message: types.Message, state: FSMContext):
     con = sqlite3.connect('ref.db')
@@ -215,6 +251,13 @@ async def start(message: types.Message, state: FSMContext):
 async def menu(call: types.CallbackQuery, state: FSMContext):
     #await bot.answer_callback_query(call.id)
     await bot.delete_message(call.from_user.id, call.message.message_id)
+    con = sqlite3.connect('ref.db')
+    cur = con.cursor()
+    tries =  cur.execute('SELECT premium FROM db WHERE user = ?', (call.from_user.id,)).fetchone()
+    con.close()
+    tariffs = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton('Тестовое видео', callback_data='simple'), InlineKeyboardButton('Премиум видео', callback_data='premium'))
+    if tries[0] < 2:
+        tariffs.add(InlineKeyboardButton('GoldPack', callback_data='gold'))
     pic = open('menu.jpg', 'rb')
     await bot.send_photo(call.from_user.id, caption='Выбери какое видео хочешь купить?', photo=pic, reply_markup=tariffs)
     pic.close()
@@ -274,6 +317,12 @@ async def check(call: types.CallbackQuery, state: FSMContext):
         msg = data[0][1]
         price = 10*data[0][0]
         tries = data[0][0]
+    elif type == 'gold':
+        data = cur.execute('SELECT gold, msg_gold FROM db WHERE user = ?', (call.from_user.id,)).fetchall()
+        print(data)
+        msg = data[0][1]
+        price = 999
+        tries = data[0][0]
     con.commit()
     con.close()
     print(type, msg, price, tries)
@@ -301,6 +350,8 @@ async def check(call: types.CallbackQuery, state: FSMContext):
                 cur.execute('UPDATE db SET premium = ?, msg_premium = "No" WHERE user = ?', (tries+1, call.from_user.id,))
             elif type == 'simple':
                 cur.execute('UPDATE db SET simple = ?, msg = "No" WHERE user = ?', (tries+1, call.from_user.id,))
+            elif type == 'gold':
+                cur.execute('UPDATE db SET gold = ?, msg_gold = "No" WHERE user = ?', (tries+1, call.from_user.id,))
         except IndexError:
             #await bot.delete_message(call.from_user.id, call.message.message_id)
             await bot.send_message(call.from_user.id, "Ты купил все ссылки :/")
